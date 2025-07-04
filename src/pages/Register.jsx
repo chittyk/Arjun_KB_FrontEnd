@@ -1,5 +1,5 @@
-import React from "react";
 import { useState } from "react";
+import api from "../utils/api";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -12,7 +12,7 @@ function Register() {
   const [cPasswordErr, setCPasswordErr] = useState("");
 
   const [otp, setOtp] = useState("");
-  const [step, setstep] = useState(1);
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -63,22 +63,51 @@ function Register() {
     }
   };
 
-  const SendOtp = async () => {
-    setMsg("");
-    setErr("");
-    if (emailErr || passwordErr || cPasswordErr) {
-      setMsg("");
-      setErr("Fill the form Correctly ");
-    }
+  const sendOtp = async () => {
     try {
-        setLoading(true)
+      setLoading(true);
+      const res = await api.post("/register", { email });
+      setErr("");
 
-
-        
-    } catch (error) {
-        
+      setMsg(res.data.msg);
+      setStep(2);
+    } catch (err) {
+      setErr(err.response.data.msg || "Failed to send OTP");
+      setMsg("");
+      console.log(msg);
+    } finally {
+      setLoading(false);
     }
   };
+   const verifyOtp = async () => {
+  try {
+    setLoading(true);
+
+    const res = await api.post("/verify", { email, password, otp });
+
+    // 🔐 Log token from response
+    console.log("JWT token from response:", res.data.token);
+
+    // 💾 Save token
+    localStorage.setItem("token", res.data.token);
+
+    // 📦 Check if token saved in localStorage
+    console.log("Token in localStorage:", localStorage.getItem("token"));
+
+    setErr(null);
+    setMsg("Registered! Redirecting...");
+    
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1500);
+    
+  } catch (err) {
+    setErr(err.response?.data?.error || "OTP verification failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
@@ -161,12 +190,36 @@ function Register() {
             <div className="mb-4">
               <button
                 className="w-full bg-green-600 text-white py-3 rounded-lg transition  hover:shadow-2xl hover:bg-green-700"
-                onClick={SendOtp}
+                onClick={sendOtp}
                 disabled={loading}
               >
                 {loading ? "Sending OTP" : "Send OTP"}
               </button>
             </div>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <div className="mb-6">
+              <label className="block mb-1 text-sm font-medium text-gray-600">
+                Enter OTP
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="6-digit code"
+              />
+            </div>
+
+            <button
+              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
+              onClick={verifyOtp}
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify & Register"}
+            </button>
           </>
         )}
       </div>
