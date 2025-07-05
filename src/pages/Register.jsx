@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../utils/api";
+import { useNavigate } from "react-router-dom";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -11,11 +12,36 @@ function Register() {
   const [cPassword, setCPassword] = useState("");
   const [cPasswordErr, setCPasswordErr] = useState("");
 
+  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
+  const [startTimer,setStartTimer] = useState(false)
+
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (timeLeft <= 0 || !startTimer) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [startTimer,timeLeft]);
+
+  // 🕒 Format time as MM:SS
+  const formatTime = (seconds) => {
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const navigate = useNavigate();
+  const handleAlreadyHaveAccount = () => {
+    navigate("/login");
+  };
 
   const handleEmailChange = (e) => {
     const value = e.target.value;
@@ -39,6 +65,12 @@ function Register() {
     setPassword(value);
     // Reset error first
     setPasswordErr("");
+
+    if (cPassword === value) {
+      setCPasswordErr("");
+    } else {
+      setCPasswordErr("Conform password is Mismatch");
+    }
 
     if (/\s/.test(value)) {
       setPasswordErr("Password should not contain spaces");
@@ -65,12 +97,16 @@ function Register() {
 
   const sendOtp = async () => {
     try {
+      if (!email || !password) {
+        setErr("Field can't be Empty !");
+        return;
+      }
       setLoading(true);
       const res = await api.post("/register", { email });
       setErr("");
-
       setMsg(res.data.msg);
       setStep(2);
+      setStartTimer(true)
     } catch (err) {
       setErr(err.response.data.msg || "Failed to send OTP");
       setMsg("");
@@ -79,35 +115,33 @@ function Register() {
       setLoading(false);
     }
   };
-   const verifyOtp = async () => {
-  try {
-    setLoading(true);
+  const verifyOtp = async () => {
+    try {
+      setLoading(true);
 
-    const res = await api.post("/verify", { email, password, otp });
+      const res = await api.post("/verify", { email, password, otp });
 
-    // 🔐 Log token from response
-    console.log("JWT token from response:", res.data.token);
+      // 🔐 Log token from response
+      console.log("JWT token from response:", res.data.token);
 
-    // 💾 Save token
-    localStorage.setItem("token", res.data.token);
+      // 💾 Save token
+      localStorage.setItem("token", res.data.token);
 
-    // 📦 Check if token saved in localStorage
-    console.log("Token in localStorage:", localStorage.getItem("token"));
+      // 📦 Check if token saved in localStorage
+      console.log("Token in localStorage:", localStorage.getItem("token"));
 
-    setErr(null);
-    setMsg("Registered! Redirecting...");
-    
-    setTimeout(() => {
-      window.location.href = "/login";
-    }, 1500);
-    
-  } catch (err) {
-    setErr(err.response?.data?.error || "OTP verification failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      setErr(null);
+      setMsg("Registered! Redirecting...");
 
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (err) {
+      setErr(err.response?.data?.error || "OTP verification failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
@@ -174,7 +208,7 @@ function Register() {
               >
                 Conform Password
               </label>
-              {cPassword && (
+              {cPasswordErr && (
                 <p className="text-left text-sm text-red-600 m-0 transition duration-300">
                   {cPasswordErr}
                 </p>
@@ -196,6 +230,14 @@ function Register() {
                 {loading ? "Sending OTP" : "Send OTP"}
               </button>
             </div>
+            <div className="mb-4 w-full flex justify-end">
+              <button
+                onClick={handleAlreadyHaveAccount}
+                className="text-blue-600 text-sm font-medium hover:cursor-pointer hover:text-blue-800 transition duration-300 bg-transparent border-none p-0"
+              >
+                Already have account?
+              </button>
+            </div>
           </>
         )}
         {step === 2 && (
@@ -212,7 +254,15 @@ function Register() {
                 placeholder="6-digit code"
               />
             </div>
-
+            <p className="text-xs text-gray-500 mt-1">
+              Time remaining:{" "}
+              <span className="font-semibold">{formatTime(timeLeft)}</span>
+            </p>
+            {timeLeft <= 0 && (
+              <p className="text-red-500 text-sm mt-2">
+                OTP expired. Please resend.
+              </p>
+            )}
             <button
               className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
               onClick={verifyOtp}
