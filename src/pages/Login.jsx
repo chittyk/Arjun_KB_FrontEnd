@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import api from "../utils/api";
-
+import MainNav from "../componets/main_nav";
+import MainFooter from "../componets/MainFooter";
 function Login() {
   const navigate = useNavigate();
 
@@ -19,6 +20,9 @@ function Login() {
   const [msg, setMsg] = useState("");
   const [step, setStep] = useState(1);
   const [loding, setLoading] = useState(false);
+
+  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
+  
 
   //handleEmailChange
   const handleEmailChange = (e) => {
@@ -55,7 +59,7 @@ function Login() {
         email,
         password,
       });
-      setMsg(res.data.msg);
+      setOtpErr(res.data.msg);
       setErr(false);
       localStorage.setItem("token", res.data.token);
       // navigate("/dashboard");
@@ -64,29 +68,95 @@ function Login() {
       }, 1500);
     } catch (err) {
       console.error("Login failed:", err);
+      setLoading(false)
       setErr(true);
       setMsg(err.response?.data?.error || "Login failed");
     }
   };
 
   //handleForgetPassword
-  const handleForgetPassword = () => {
-    setStep(2);
+  const handleForgetPassword = async () => {
+    try {
+      const res = await api.post("/forgetPassword", { email });
+      console.log(res)
+      // setMsg(res?.data?.msg || "Otp send to ", email);
+      setErr(false);
+      setStep(2);
+      setTimeLeft(180)
+
+    } catch (error) {
+      console.log(error)
+      setErr(true);
+      setMsg(error.response?.data?.error || "Failed to send Otp");
+    }
   };
 
   //handleDontHaveAccount
   const handleDontHaveAccount = () => {
     navigate("/register");
   };
+  
+
+
+
+  useEffect(() => {
+      
+
+      if(timeLeft <= 0) {
+        setStep(1)
+      return
+      }
+  
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+  
+      return () => clearInterval(timer);
+    }, [timeLeft]);
+  
+    // 🕒 Format time as MM:SS
+    const formatTime = (seconds) => {
+      const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      return `${m}:${s}`;
+    };
+
+  // handleOtpChange
+  const handleOtpChange = async (e) => {
+    const value = e.target.value;
+    setOtp(value);
+
+    if (value.length === 6) {
+      try {
+        const newPassword = password;
+        const otp=value
+        const res = await api.post("/resetPassword", { email, newPassword, otp });
+        setMsg(res?.data?.msg || "OTP Verify successfully");
+        setErr(false);
+        setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+      } catch (error) {
+        // alert(error.response?.data?.error)
+        setErr(true);
+        setOtpErr(error.response?.data?.error || "Invalid OTP ");
+      }
+    }
+
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 shadow-2xl w-full max-w-md border rounded-2xl border-gray-200">
-        <h2 className="text-center text-3xl font-semibold text-gray-800 mb-6">
+    
+    <>
+    
+    <div className="min-h-screen  flex items-center justify-center p-4">
+      
+      <div className="bg-blue p-8 shadow-2xl shadow-blue-900  w-full  max-w-md border rounded-2xl border-4 border-blue-800">
+        <h2 className="text-center text-3xl font-semibold text-blue-400 mb-6">
           Login
         </h2>
         {msg && err === false && (
-          <p className="text-center text-sm text-green-600 mb-4 transition duration-300">
+          <p className="text-center text-sm text-blue-600 mb-4 transition duration-300">
             {msg}
           </p>
         )}
@@ -101,7 +171,7 @@ function Login() {
             <div className="mb-4">
               <label
                 htmlFor=""
-                className="block mb-1 text-sm text-gray-600 font-medium"
+                className="block mb-1 text-sm text-blue-600 font-medium"
               >
                 Email
               </label>
@@ -112,7 +182,7 @@ function Login() {
               )}
               <input
                 type="email"
-                className=" border w-full px-4 py-2  rounded-lg focus:ring-green-400 focus:ring-2 outline-0 "
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
                 value={email}
                 onChange={handleEmailChange}
                 placeholder="example@xyz.com"
@@ -121,7 +191,7 @@ function Login() {
             <div className="mb-4">
               <label
                 htmlFor=""
-                className="text-gray-600 font-medium text-sm mb-1 block"
+                className="text-blue-600 font-medium text-sm mb-1 block"
               >
                 Password
               </label>
@@ -136,12 +206,12 @@ function Login() {
                 placeholder="Password"
                 value={password}
                 onChange={handlePasswordChage}
-                className="border w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-green-400 outline-0"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
               />
             </div>
             <button
               onClick={handleLogin}
-              className="mb-4 bg-green-600 text-white w-full py-3 rounded-lg hover:bg-green-700 hover:rounded-full transition duration-300 cursor-pointer "
+              className="mb-4 bg-blue-600 text-white w-full py-3 rounded-lg hover:bg-blue-700 hover:rounded-full transition duration-300 cursor-pointer "
             >
               {loding ? "Loging..." : "Login"}
             </button>
@@ -174,7 +244,7 @@ function Login() {
               <div className="mb-4">
                 <label
                   htmlFor=""
-                  className=" text-sm text-gray-600 font-medium py-1"
+                  className=" text-sm text-blue-600 font-medium py-1"
                 >
                   Enter the OTP
                 </label>
@@ -183,19 +253,30 @@ function Login() {
                     {otpErr}
                   </p>
                 )}
-                 <input
-                type="text"
-                placeholder="Password"
-                value={password}
-                onChange={handlePasswordChage}
-                className="border w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-green-400 outline-0"
-              />
+                <input
+                  type="text"
+                  placeholder="Password"
+                  value={otp}
+                  onChange={handleOtpChange}
+                  className="border w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 outline-0"
+                />
+                <p className="text-xs text-blue-500 mt-1">
+              Time remaining:{" "}
+              <span className="font-semibold">{formatTime(timeLeft)}</span>
+            </p>
+            {timeLeft <= 0 && (
+              <p className="text-red-500 text-sm mt-2">
+                OTP expired. Please resend.
+              </p>
+            )}
               </div>
             </div>
           </>
         )}
       </div>
     </div>
+    
+    </>
   );
 }
 

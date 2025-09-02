@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import EditProfile from "./pages/EditProfile";
+
 import { useState, useEffect } from "react";
 
 function App() {
@@ -14,16 +16,22 @@ function App() {
   }, []);
 
   return (
-    <Routes>
+    <div className="bg-gray-900">
+      <Routes>
       <Route
         path="/"
         element={
           token ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
         }
       />
+
       <Route
         path="/dashboard"
         element={token ? <Dashboard /> : <Navigate to="/login" />}
+      />
+      <Route
+        path="/edit-profile"
+        element={token ? <EditProfile /> : <Navigate to="/login" />}
       />
       <Route
         path="/register"
@@ -34,6 +42,7 @@ function App() {
         element={token ? <Navigate to="/dashboard" /> : <Login />}
       />
     </Routes>
+    </div>
   );
 }
 

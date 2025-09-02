@@ -3,6 +3,9 @@ import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 
 function Register() {
+  const [userName ,setUserName]=useState("")
+  const [userNameErr,setUserNameErr]= useState("")
+
   const [email, setEmail] = useState("");
   const [emailErr, setEmailErr] = useState("");
 
@@ -59,6 +62,19 @@ function Register() {
     return;
   };
 
+  //handle userName
+  const handleUserNameChange=(e)=>{
+    const value = e.target.value
+    setUserName(value)
+
+    const regex = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    if (!regex.test(value)) {
+      setUserNameErr('Username cannot start with a number or contain spaces');
+    } else {
+      setUserNameErr('');
+    }
+  }
+
   //handle Password Change
   const handlePasswordChange = (e) => {
     const value = e.target.value;
@@ -97,18 +113,18 @@ function Register() {
 
   const sendOtp = async () => {
     try {
-      if (!email || !password) {
+      if (!email || !password || !userName) {
         setErr("Field can't be Empty !");
         return;
       }
       setLoading(true);
-      const res = await api.post("/register", { email });
+      const res = await api.post("/register", { email ,userName});
       setErr("");
       setMsg(res.data.msg);
       setStep(2);
       setStartTimer(true)
     } catch (err) {
-      setErr(err.response.data.msg || "Failed to send OTP");
+      setErr(err.response.data.msg || "Failed to send OTP : user name or email ready exist");
       setMsg("");
       console.log(msg);
     } finally {
@@ -119,7 +135,7 @@ function Register() {
     try {
       setLoading(true);
 
-      const res = await api.post("/verify", { email, password, otp });
+      const res = await api.post("/verify", { email, userName, password, otp });
 
       // 🔐 Log token from response
       console.log("JWT token from response:", res.data.token);
@@ -144,9 +160,9 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 shadow-2xl w-full max-w-md border boarder-gray-200 rounded-2xl">
-        <h2 className="text-3xl font-semibold text-center text-gray-800 mb-6 ">
+    <div className="min-h-screen  flex items-center justify-center p-4">
+      <div className="bg-blue p-8 shadow-2xl shadow-blue-900  w-full  max-w-md border rounded-2xl border-4 border-blue-800">
+        <h2 className="text-center text-3xl font-semibold text-blue-400 mb-6">
           Create Account
         </h2>
         {msg ? (
@@ -161,10 +177,32 @@ function Register() {
 
         {step === 1 && (
           <>
+
             <div className="mb-4">
               <label
                 htmlFor=""
-                className="block mb-1 text-sm font-medium text-gray-600"
+                className="block mb-1 text-sm text-blue-600 font-medium"
+              >
+                User Name
+              </label>
+              {userName && (
+                <p className="text-left text-sm text-red-600 m-0 transition duration-300">
+                  {userNameErr}
+                </p>
+              )}
+              <input
+                type="email"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
+                value={userName}
+                onChange={handleUserNameChange}
+                placeholder="yourName_232"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor=""
+                className="block mb-1 text-sm text-blue-600 font-medium"
               >
                 Email
               </label>
@@ -175,7 +213,7 @@ function Register() {
               )}
               <input
                 type="email"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
                 value={email}
                 onChange={handleEmailChange}
                 placeholder="you@example.com"
@@ -184,7 +222,7 @@ function Register() {
             <div className="mb-4">
               <label
                 htmlFor=""
-                className="block mb-1 text-gray-600 text-sm font-medium"
+                className="block mb-1 text-sm text-blue-600 font-medium"
               >
                 Password
               </label>
@@ -195,7 +233,7 @@ function Register() {
               )}
               <input
                 type="text"
-                className="w-full px-4 py-2  border  rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
                 value={password}
                 onChange={handlePasswordChange}
                 placeholder="*************"
@@ -204,7 +242,7 @@ function Register() {
             <div className="mb-4">
               <label
                 htmlFor=""
-                className="block text-sm text-gray-600 font-medium mb-1"
+                className="block mb-1 text-sm text-blue-600 font-medium"
               >
                 Conform Password
               </label>
@@ -215,7 +253,7 @@ function Register() {
               )}
               <input
                 type="text"
-                className="border w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
                 value={cPassword}
                 onChange={handleCPasswordChange}
                 placeholder="*************"
@@ -223,7 +261,7 @@ function Register() {
             </div>
             <div className="mb-4">
               <button
-                className="w-full bg-green-600 text-white py-3 rounded-lg transition  hover:shadow-2xl hover:bg-green-700"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg transition  hover:shadow-2xl hover:bg-blue-700"
                 onClick={sendOtp}
                 disabled={loading}
               >
@@ -243,12 +281,12 @@ function Register() {
         {step === 2 && (
           <>
             <div className="mb-6">
-              <label className="block mb-1 text-sm font-medium text-gray-600">
+              <label className="block mb-1 text-sm text-blue-600 font-medium">
                 Enter OTP
               </label>
               <input
                 type="text"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
+                className="border placeholder-gray-400 text-white w-full px-4 py-2 rounded-lg focus:ring-2 border-blue-400 focus:ring-blue-400 outline-0"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="6-digit code"
